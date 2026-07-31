@@ -13,5 +13,13 @@
 	"description": "",
 	"dependencies": {
 		"geode.node-ids": ">=v1.23.3"
+	},
+	"tags": [
+		"online",
+		"enhancement",
+		"interface"
+	],
+	"links": {
+		"source": "https://github.com/convixed123/Better-Level-Browser"
 	}
 }
