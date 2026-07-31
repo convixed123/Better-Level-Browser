@@ -6,6 +6,7 @@
 #include "Geode/cocos/menu_nodes/CCMenu.h"
 #include "Geode/cocos/menu_nodes/CCMenuItem.h"
 #include "Geode/cocos/sprite_nodes/CCSprite.h"
+#include "Geode/loader/Log.hpp"
 #include "Geode/utils/cocos.hpp"
 #include "LevelBrowserLayerExtra.hpp"
 #include <Geode/Enums.hpp>
@@ -86,13 +87,21 @@ class $modify(HookedLevelSearchLayer, LevelSearchLayer) {
         auto searchBtn = static_cast<CCMenuItemSpriteExtra*>(searchMenu->getChildByID("search-level-button"));
         if (!searchBtn) return;
 
-        if (this->m_fields->m_betterSearchToggler->isToggled()) {
+        //log::info("{}", this->m_type);
+
+        if (this->m_fields->m_betterSearchToggler->isToggled() && this->m_type == 0) {
             searchBtn->setVisible(false);
             this->m_fields->m_searchBtnExtra->setVisible(true);
         } else {
             searchBtn->setVisible(true);
             this->m_fields->m_searchBtnExtra->setVisible(false);
         }
+    }
+
+    void onSearchMode(CCObject* sender) {
+        this->updateSearchBtn();
+
+        LevelSearchLayer::onSearchMode(sender);
     }
 
     void onBetterSearchToggler(CCObject*) {
