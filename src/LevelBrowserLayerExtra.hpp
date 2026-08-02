@@ -21,15 +21,19 @@ using namespace geode::prelude;
 
 class LevelBrowserLayerExtra : public CCLayer, public LevelManagerDelegate {
 private:
+    CCMenu* m_reloadMenu;
+
     LoadingCircle* m_loadingCircle;
     LoadingCircle* m_loadingCircleExt;
 
     CCMenu* m_listMenu;
+    GJListLayer* m_listLayer;
     GJSearchObject* m_searchObject;
 
     CCLabelBMFont* m_infoLabel;
 
     CCArray* m_storedLevels;
+    size_t m_addedLevelsCount;
 
     size_t m_page{0};
     bool m_loadingInProcess{false};
@@ -57,6 +61,9 @@ private:
 
     void onBack(CCObject*);
     void keyBackClicked() override;
+
+    void onReload(CCObject*);
+    void onSoftReload(CCObject*);
 public:
     static LevelBrowserLayerExtra* create(GJSearchObject* searchObject);
     static CCScene* scene(GJSearchObject* searchObject);

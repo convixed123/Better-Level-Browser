@@ -6,6 +6,8 @@
 #include "Geode/cocos/layers_scenes_transitions_nodes/CCLayer.h"
 #include "Geode/cocos/layers_scenes_transitions_nodes/CCScene.h"
 #include "Geode/cocos/menu_nodes/CCMenu.h"
+#include "Geode/cocos/menu_nodes/CCMenuItem.h"
+#include "Geode/cocos/sprite_nodes/CCSprite.h"
 #include "Geode/utils/cocos.hpp"
 #include <Geode/Enums.hpp>
 #include <Geode/binding/AppDelegate.hpp>
@@ -104,9 +106,38 @@ void LevelBrowserLayerExtra::guiMain() {
 
     this->m_infoLabel = CCLabelBMFont::create("0 levels are loaded", "goldFont.fnt");
     this->m_infoLabel->setID("info-label");
-    this->m_infoLabel->setPosition({winSize.width - 70, winSize.height - 12});
+    this->m_infoLabel->setPosition({winSize.width - 70, winSize.height - 10});
     this->m_infoLabel->setScale(0.5f);
     this->addChild(this->m_infoLabel);
+
+    this->m_reloadMenu = CCMenu::create(nullptr);
+    this->m_reloadMenu->setID("reload-menu");
+    this->m_reloadMenu->setAnchorPoint({0, 0});
+    this->m_reloadMenu->setScale(1);
+    this->m_reloadMenu->setContentSize({50, 50});
+    this->m_reloadMenu->setPosition(winSize.width - 52, 2);
+    this->addChild(this->m_reloadMenu, 1);
+
+    auto reloadBtn = CCMenuItemSpriteExtra::create(
+        CCSprite::createWithSpriteFrameName("GJ_updateBtn_001.png"),
+        this,
+        menu_selector(LevelBrowserLayerExtra::onReload)
+    );
+    reloadBtn->setID("reload-button");
+    reloadBtn->setPosition({25, 25});
+    this->m_reloadMenu->addChild(reloadBtn);
+
+    auto softReloadSpr = CCSprite::createWithSpriteFrameName("GJ_replayBtn_001.png");
+    softReloadSpr->setScale(0.65f);
+
+    auto softReloadBtn = CCMenuItemSpriteExtra::create(
+        softReloadSpr,
+        this,
+        menu_selector(LevelBrowserLayerExtra::onSoftReload)
+    );
+    softReloadBtn->setID("soft-reload-button");
+    softReloadBtn->setPosition({25, 75});
+    this->m_reloadMenu->addChild(softReloadBtn);
 }
 
 void LevelBrowserLayerExtra::guiList() {
@@ -127,17 +158,17 @@ void LevelBrowserLayerExtra::guiList() {
     this->m_loadingCircle->show();
     this->m_listMenu->addChild(this->m_loadingCircle, 2);
     
-    auto listLayer = GJListLayer::create(
+    this->m_listLayer = GJListLayer::create(
         nullptr,
         "Online Levels",
-        {0, 0, 0, 0},
+        {191, 114, 62, 255},
         356, 220, 0
     );
-    listLayer->setID("list-layer");
-    listLayer->setContentSize({356, 175});
-	listLayer->setPositionX(winSize.width / 2.f - listLayer->getContentSize().width / 2.f);
-	listLayer->setPositionY((winSize.height / 2.f - listLayer->getContentSize().height / 2.f) - 27.5f);
-    this->m_listMenu->addChild(listLayer, 1);
+    this->m_listLayer->setID("list-layer");
+    this->m_listLayer->setContentSize({356, 220});
+	this->m_listLayer->setPositionX(winSize.width / 2.f - this->m_listLayer->getContentSize().width / 2.f);
+	this->m_listLayer->setPositionY((winSize.height / 2.f - this->m_listLayer->getContentSize().height / 2.f));
+    this->m_listMenu->addChild(this->m_listLayer, 1);
 
     this->m_loadingCircleExt = LoadingCircle::create();
     this->m_loadingCircleExt->setID("loading-circle-extra");
@@ -152,6 +183,12 @@ void LevelBrowserLayerExtra::guiList() {
 void LevelBrowserLayerExtra::loadLevels() {
     if (this->m_loadingInProcess) return;
     this->m_loadingInProcess = true;
+
+    log::info("Loading new levels from page {}", this->m_page);
+
+    this->m_addedLevelsCount = 0;
+
+    this->m_reloadMenu->setVisible(false);
 
     if (!this->m_justOpenned) {
         this->m_loadingCircleExt->setVisible(true);
@@ -176,7 +213,7 @@ void LevelBrowserLayerExtra::loadLevels() {
 }
 
 void LevelBrowserLayerExtra::updateList() {
-    if (auto listViewOld = this->getChildByIDRecursive("list-view")) {
+    if (auto listViewOld = this->m_listLayer->getChildByID("list-view")) {
         listViewOld->removeFromParent();
     }
 
@@ -184,9 +221,8 @@ void LevelBrowserLayerExtra::updateList() {
 
     auto listView = CustomListView::create(this->m_storedLevels, BoomListType::Level, 214, 357);
     listView->setID("list-view");
-    listView->setPositionX(winSize.width / 2 - listView->getContentSize().width / 2);
-	listView->setPositionY((winSize.height / 2 - listView->getContentSize().height / 2) - 2.f);
-    this->m_listMenu->addChild(listView, 0);
+    listView->setPositionY(6.f);
+    this->m_listLayer->addChild(listView, 0);
 
     this->m_infoLabel->setString(fmt::format("{} levels are loaded", this->m_storedLevels->count()).c_str());
 
@@ -198,6 +234,8 @@ void LevelBrowserLayerExtra::updateList() {
             this->m_loadingCircle->setVisible(false);
         }
     }
+
+    this->m_reloadMenu->setVisible(true);
 
     this->m_justOpenned = false;
     this->m_loadingInProcess = false;
@@ -226,7 +264,6 @@ void LevelBrowserLayerExtra::draw() {
     if (this->m_listScroll >= 0) {
         if (!this->m_loadingInProcess) {
             ++this->m_page;
-            log::info("Loading new levels from page {}...", this->m_page);
 
             this->loadLevels();
         }
@@ -234,6 +271,7 @@ void LevelBrowserLayerExtra::draw() {
 }
 
 void LevelBrowserLayerExtra::loadLevelsFinished(CCArray* levels, const char*) {
+    this->m_addedLevelsCount = levels->count();
     CCArrayExt<GJGameLevel*> levelsExt = levels;
     for (auto lvl : levelsExt) {
         if (!lvl) continue;
@@ -244,6 +282,7 @@ void LevelBrowserLayerExtra::loadLevelsFinished(CCArray* levels, const char*) {
 }
 
 void LevelBrowserLayerExtra::loadLevelsFailed(const char* key) {
+    this->m_reloadMenu->setVisible(true);
     this->m_loadingCircle->setVisible(false);
     this->m_loadingCircleExt->setVisible(false);
 }
@@ -254,6 +293,25 @@ void LevelBrowserLayerExtra::keyBackClicked() {
 
 void LevelBrowserLayerExtra::onBack(CCObject*) {
     CCDirector::get()->popSceneWithTransition(0.5f, kPopTransitionFade);
+}
+
+void LevelBrowserLayerExtra::onReload(CCObject*) {
+    this->m_page = 0;
+    this->m_storedLevels->removeAllObjects();
+    this->updateList();
+
+    this->m_loadingCircle->setVisible(true);
+
+    this->m_justOpenned = true;
+    this->loadLevels();
+}
+
+void LevelBrowserLayerExtra::onSoftReload(CCObject*) {
+    for (size_t i = 0; i < this->m_addedLevelsCount; ++i) {
+        this->m_storedLevels->removeLastObject();
+    }
+    this->updateList();
+    this->loadLevels();
 }
 
 LevelBrowserLayerExtra::~LevelBrowserLayerExtra() {
